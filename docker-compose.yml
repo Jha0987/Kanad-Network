@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: telecom_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: telecom_noc
+
+  redis:
+    image: redis:7-alpine
+    container_name: telecom_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./server
+    container_name: telecom_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongodb:27017/telecom_noc
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - CLIENT_URL=http://localhost:5173
+      - REDIS_URL=redis://redis:6379
+      - ALARM_ESCALATION_INTERVAL_MS=60000
+    depends_on:
+      - mongodb
+      - redis
+
+  frontend:
+    build: ./client
+    container_name: telecom_frontend
+    restart: always
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+    depends_on:
+      - backend
+
+volumes:
+  mongodb_data:
